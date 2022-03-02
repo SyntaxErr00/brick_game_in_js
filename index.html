@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>arcade game</title>
+  </head>
+  <body>
+    <canvas>
+      <div class="left">hello</div>
+      <div class="right"></div>
+    </canvas>
+    <script type="text/javascript" >
+    let canvas = document.querySelector("canvas");
+    //impostiamo le dimensioni uguali a quelle della tab
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+    let ctx = canvas.getContext("2d");
+
+
+    let hitCheck = false;
+    let step = 0;
+    let re = {
+      x: (width-100)/2, y: height-50, w:100, h:10, color:"white",
+      draw: function(){
+        ctx.fillStyle = re.color;
+        ctx.fillRect(re.x, re.y, re.w, re.h);
+      },
+      update: function(){
+        if(re.x > 0 && re.x+re.w < width){
+          re.x += step;
+        }
+        else if(re.x <= 0){
+          re.x += 2 ;//per sbloccarlo dalla condizione < 0
+       }
+       else if(re.x+re.w >= width){
+         re.x -= 2;
+       }
+      }//fine update
+    };
+
+    let counter = 0; //serve per contare se tutti i brick sono stati eliminati
+    class brick{
+      constructor(x, y){
+        this.x = x;
+        this.y = y;
+        this.w = width/10;
+        this.h = height/10;
+        this.color = "green";
+      }
+      draw(){
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+      }
+      collision(){
+        if(ball.y < this.y+this.h){
+          if(this.x < ball.x && (this.x+this.w) > (ball.x+ball.raggio)){
+            this.w = this.h = 0;
+            counter++;
+          }
+        }
+      }
+    }
+
+    //creiamo i mantoncini
+    let brick_w = width/10;
+    let brick_h = height/10;
+    let bricks = [];
+    for(let i =1; i<9; i++){  //siamo poartiti da 1 per creare uno spaxio ai lati
+      for(let j= 1; j<4; j++){
+        bricks.push(new brick(i*brick_w, brick_h*j));
+      }
+    }
+
+
+
+    window.onkeydown = function() {
+      switch (window.event.keyCode) {
+          case 37:
+           step = -10;
+           break;
+          case 39:
+           step = 10;
+           break;
+      }//fine switch
+    }//fine onkeydown
+
+    window.onkeyup = function() {
+      switch (window.event.keyCode) {
+          case 37:
+           step = 0;
+           break;
+          case 39:
+           step = 0;
+           break;
+      }//fine switch
+    }
+    //hamdle touchscreen 
+    let left = right = 0;
+    window.addEventListener("touchstart", function(e){
+      e.preventDefault();
+      let touch;
+      let offset = width*0.25;
+      if(e.targetTouches.length === 1){
+        touch = e.targetTouches[0];
+      }
+      if(touch.pageX > window.innerWidth-offset){
+        left = 1;
+      }
+      if(touch.pageX < offset){
+        right = 1;
+      }
+    });
+    window.addEventListener("touchend", function(e){
+      e.preventDefault();
+      left = right = step = 0;
+    });
+
+    setInterval(function(){
+      if(right){
+        step = -10;
+      }else if(left){
+        step = +10
+      }
+    },10);
+    //end touch handling
+
+    window.onmousedown = function(){
+      window.onmousemove = function(){
+        re.x = event.clientX;
+      }
+    }
+
+    //craiamo una varibile game_over che ci indichi quando la partita è finita
+    let game_over = true;
+
+    //creiamo una palla
+
+    let ballVy = ballVx = 5;
+    let ball = {
+      x:width/2, y:20, raggio:10, color:"white",
+      draw: function(){
+        ctx.beginPath();
+        ctx.fillStyle = ball.color;
+        ctx.arc(ball.x, ball.y, ball.raggio, 0, 2 * Math.PI);
+        ctx.fill();
+      },
+      update: function(){
+        ball.y += ballVy;
+        ball.x += ballVx;
+      },
+      collision: function(){
+        if(ball.x > width-ball.raggio){//muro destro
+          ballVx = -ballVx;
+        }
+        if(ball.x < ball.raggio){//muro sinistro
+          ballVx = -ballVx;
+        }
+        if(ball.y < ball.raggio){//muro in alto
+          ballVy = -ballVy;
+        }
+        if(ball.y > (height-60)){//muro in basso
+          if((ball.x >= re.x) && ((ball.x) <= (re.x+re.w))){
+            ballVy = -ballVy;
+          }else{
+            ctx.fillStyle = 'rgba(0, 0, 0, 1.5)';
+            ctx.fillRect(0, 0, width, height);
+            ctx.font = "30px Thaoma";
+            ctx.fillStyle = "white";
+            ctx.fillText("GAME OVER", width/2-100, height/2);
+            cancelFrameAnimation(id);
+          }
+        }//if muro basso
+      }
+    };
+
+
+
+
+
+
+
+    let id = null;
+    function loop(){
+      ctx.fillStyle = 'rgba(0, 0, 0, 1.5)';
+      ctx.fillRect(0, 0, width, height);
+
+      ball.draw();
+      ball.update();
+      ball.collision();
+      re.draw();
+      re.update();
+
+      for(let i=0; i<bricks.length; i++){
+        bricks[i].draw();
+        bricks[i].collision();
+      }
+      if(counter === bricks.length){
+        ctx.fillStyle = 'rgba(0, 0, 0, 1.5)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.font = "30px Thaoma";
+        ctx.fillStyle = "white";
+        ctx.fillText("YOU WIN", width/2-100, height/2);
+        cancelFrameAnimation(id);
+      }
+      // requestAnimationFrame(loop);
+      setTimeout(() => requestAnimationFrame(loop), 1000/50);
+    }
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 1.5)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.font = "30px Thaoma";
+    ctx.fillStyle = "white";
+    ctx.fillText("LOADING...", width/2-100, height/2);
+
+    setTimeout(loop, 3000);
+
+    
+    
+    </script>
+  </body>
+</html>
